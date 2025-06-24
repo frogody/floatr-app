@@ -67,6 +67,12 @@ enum ReportReason {
   OTHER
 }
 
+enum ReportType {
+  USER_PROFILE
+  BOAT_PROFILE
+  MESSAGE
+}
+
 enum ReportStatus {
   PENDING
   INVESTIGATING
@@ -353,6 +359,8 @@ model Report {
   reporterId       String
   reportedUserId   String
   reportedBoatId   String?
+  reportedMessageId String?
+  reportType       ReportType   @default(USER_PROFILE)
   reason           ReportReason
   description      String
   evidence         String[]     @default([])

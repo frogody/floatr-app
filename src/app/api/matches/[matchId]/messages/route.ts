@@ -27,11 +27,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Find user and verify access to this match
+    // Find user and verify access to this match, also get blocked users
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: true,
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -42,7 +44,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Verify user has access to this match (is captain of one of the boats)
+    // Get blocked user IDs
+    const blockedUserIds = [
+      ...user.blocksInitiated.map(block => block.blockedUserId),
+      ...user.blocksReceived.map(block => block.blockerId),
+    ];
+
+    // Verify user has access to this match (is captain of one of the boats) and not blocked
     const match = await prisma.match.findFirst({
       where: {
         id: matchId,
@@ -51,6 +59,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           { likerBoat: { captainId: user.id } },
           { likedBoat: { captainId: user.id } },
         ],
+        // Ensure the other boat's captain is not blocked
+        likerBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
+        likedBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
       },
       include: {
         likerBoat: {
@@ -187,6 +206,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             currentVibe: otherBoat.currentVibe,
             images: otherBoat.images,
             captain: {
+              id: otherBoat.captainId,
               firstName: otherBoat.captain.profile?.firstName,
               lastName: otherBoat.captain.profile?.lastName,
               profileImage: otherBoat.captain.profile?.profileImage,
@@ -237,11 +257,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Find user and verify access
+    // Find user and verify access, also get blocked users
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: true,
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -252,7 +274,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Verify match access
+    // Get blocked user IDs
+    const blockedUserIds = [
+      ...user.blocksInitiated.map(block => block.blockedUserId),
+      ...user.blocksReceived.map(block => block.blockerId),
+    ];
+
+    // Verify match access and not blocked
     const match = await prisma.match.findFirst({
       where: {
         id: matchId,
@@ -261,6 +289,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           { likerBoat: { captainId: user.id } },
           { likedBoat: { captainId: user.id } },
         ],
+        // Ensure the other boat's captain is not blocked
+        likerBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
+        likedBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
       },
       include: {
         chatRoom: true,

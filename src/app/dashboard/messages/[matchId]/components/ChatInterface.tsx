@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SocketProvider } from '@/lib/socket';
 import { ChatMessages } from './ChatMessages';
 import { MessageInput } from './MessageInput';
+import { ReportDialog } from '@/components/ui/report-dialog';
+import { BlockUserButton } from '@/components/ui/block-user-button';
 
 interface ChatData {
   match: {
@@ -31,6 +33,7 @@ interface ChatData {
       currentVibe: string;
       images: string[];
       captain: {
+        id?: string;
         firstName?: string;
         lastName?: string;
         profileImage?: string;
@@ -93,6 +96,8 @@ export function ChatInterface({ matchId }: ChatInterfaceProps) {
   const [chatData, setChatData] = useState<ChatData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Fetch chat data and messages
   const fetchChatData = async () => {
@@ -123,6 +128,26 @@ export function ChatInterface({ matchId }: ChatInterfaceProps) {
   useEffect(() => {
     fetchChatData();
   }, [matchId]);
+
+  // Handle block status change
+  const handleBlockStatusChange = (blocked: boolean) => {
+    setIsBlocked(blocked);
+    if (blocked) {
+      // If user was blocked, we might want to hide the chat or show a message
+      // For now, we'll just update the state
+    }
+  };
+
+  // Get captain information for reporting
+  const getCaptainInfo = () => {
+    if (!chatData) return null;
+    const captain = chatData.match.otherBoat.captain;
+    return {
+      firstName: captain.firstName || '',
+      lastName: captain.lastName || '',
+      fullName: `${captain.firstName || ''} ${captain.lastName || ''}`.trim() || 'Unknown Captain',
+    };
+  };
 
   // Loading state
   if (isLoading) {
@@ -227,13 +252,41 @@ export function ChatInterface({ matchId }: ChatInterfaceProps) {
                 </div>
               </div>
 
-              {/* Match Info */}
+              {/* Match Info & Actions */}
               <div className="flex items-center space-x-3">
                 <Badge variant="secondary" className="bg-green-100 text-green-800">
                   ✨ Matched
                 </Badge>
                 <div className="text-xs text-gray-500 hidden sm:block">
                   {new Date(chatData.match.matchedAt).toLocaleDateString()}
+                </div>
+                
+                {/* Safety Actions */}
+                <div className="flex items-center space-x-2">
+                  {/* Report Button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => setShowReportDialog(true)}
+                    title="Report User"
+                  >
+                    🚨
+                  </Button>
+                  
+                  {/* Block Button */}
+                  {(() => {
+                    const captainInfo = getCaptainInfo();
+                    return captainInfo ? (
+                      <BlockUserButton
+                        userId={chatData.match.otherBoat.captain.id || ''}
+                        userName={captainInfo.fullName}
+                        isBlocked={isBlocked}
+                        variant="icon"
+                        onBlockStatusChange={handleBlockStatusChange}
+                      />
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </div>
@@ -260,6 +313,21 @@ export function ChatInterface({ matchId }: ChatInterfaceProps) {
             />
           </div>
         </div>
+
+        {/* Report Dialog */}
+        {(() => {
+          const captainInfo = getCaptainInfo();
+          return captainInfo ? (
+            <ReportDialog
+              isOpen={showReportDialog}
+              onClose={() => setShowReportDialog(false)}
+              reportedUserId={chatData.match.otherBoat.captain.id || ''}
+              reportedUserName={captainInfo.fullName}
+              reportType="USER_PROFILE"
+              reportedContent={`Captain of boat "${chatData.match.otherBoat.name}"`}
+            />
+          ) : null;
+        })()}
       </div>
     </SocketProvider>
   );

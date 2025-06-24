@@ -14,13 +14,15 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    // Find user and their boats
+    // Find user and their boats, also get blocked users
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: {
           where: { isActive: true },
         },
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -30,6 +32,12 @@ export async function GET(_request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Get blocked user IDs
+    const blockedUserIds = [
+      ...user.blocksInitiated.map(block => block.blockedUserId),
+      ...user.blocksReceived.map(block => block.blockerId),
+    ];
 
     if (user.ownedBoats.length === 0) {
       return NextResponse.json({
@@ -43,7 +51,7 @@ export async function GET(_request: NextRequest) {
 
     const userBoatIds = user.ownedBoats.map(boat => boat.id);
 
-    // Fetch all matches where user is involved and status is MATCHED
+    // Fetch all matches where user is involved and status is MATCHED, excluding blocked users
     const matches = await prisma.match.findMany({
       where: {
         status: 'MATCHED',
@@ -51,6 +59,17 @@ export async function GET(_request: NextRequest) {
           { likerBoatId: { in: userBoatIds } },
           { likedBoatId: { in: userBoatIds } },
         ],
+        // Exclude conversations with blocked users
+        likerBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
+        likedBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
       },
       include: {
         likerBoat: {

@@ -64,11 +64,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find current user to exclude their own boats
+    // Find current user to exclude their own boats and get blocked users
     const currentUser = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: { select: { id: true } },
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -79,6 +81,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get all blocked user IDs (both directions: users I blocked and users who blocked me)
+    const blockedUserIds = [
+      ...currentUser.blocksInitiated.map(block => block.blockedUserId),
+      ...currentUser.blocksReceived.map(block => block.blockerId),
+    ];
+
     // Get user's discovery settings
     const discoverySettings = await prisma.discoverySettings.findUnique({
       where: { userId: currentUser.id },
@@ -87,9 +95,10 @@ export async function GET(request: NextRequest) {
     // Build filters based on discovery settings and query params
     const whereClause: any = {
       isActive: true,
-      // Exclude current user's boats
+      // Exclude current user's boats and boats from blocked users
       captainId: {
         not: currentUser.id,
+        ...(blockedUserIds.length > 0 && { notIn: blockedUserIds }),
       },
       // Only show boats from verified captains
       captain: {

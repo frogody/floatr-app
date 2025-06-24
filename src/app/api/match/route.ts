@@ -57,13 +57,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user and verify boat ownership
+    // Find user and verify boat ownership, also get blocked users
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: {
           where: { id: boatId, isActive: true },
         },
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -98,6 +100,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Target boat not found or inactive' },
         { status: 404 }
+      );
+    }
+
+    // Check if users have blocked each other
+    const blockedUserIds = [
+      ...user.blocksInitiated.map(block => block.blockedUserId),
+      ...user.blocksReceived.map(block => block.blockerId),
+    ];
+
+    if (blockedUserIds.includes(targetBoat.captainId)) {
+      return NextResponse.json(
+        { error: 'Cannot interact with this user' },
+        { status: 403 }
       );
     }
 
@@ -265,13 +280,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify boat ownership
+    // Verify boat ownership and get blocked users
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         ownedBoats: {
           where: { id: boatId, isActive: true },
         },
+        blocksInitiated: { select: { blockedUserId: true } },
+        blocksReceived: { select: { blockerId: true } },
       },
     });
 
@@ -282,7 +299,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all matches for this boat
+    // Get blocked user IDs
+    const blockedUserIds = [
+      ...user.blocksInitiated.map(block => block.blockedUserId),
+      ...user.blocksReceived.map(block => block.blockerId),
+    ];
+
+    // Get all matches for this boat, excluding blocked users
     const matches = await prisma.match.findMany({
       where: {
         OR: [
@@ -290,6 +313,17 @@ export async function GET(request: NextRequest) {
           { likedBoatId: boatId },
         ],
         status: MatchStatus.MATCHED,
+        // Exclude matches where the captain is blocked
+        likerBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
+        likedBoat: {
+          captainId: {
+            notIn: blockedUserIds,
+          },
+        },
       },
       include: {
         likerBoat: {
