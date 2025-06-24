@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "zones:import": "tsx scripts/import-zones.ts",
+    "db:seed:prod": "tsx scripts/production-seed.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",

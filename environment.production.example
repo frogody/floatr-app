@@ -1,0 +1,205 @@
+# Floatr Production Environment Variables
+# Copy this file to .env.production and fill in your actual values
+# IMPORTANT: Never commit .env.production to version control!
+
+# =============================================================================
+# APPLICATION CONFIGURATION
+# =============================================================================
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=https://your-domain.com
+NEXTAUTH_SECRET=your-super-secret-nextauth-secret-min-32-chars
+
+# Allowed origins for CORS (comma-separated)
+ALLOWED_ORIGINS=https://your-domain.com,https://www.your-domain.com
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+# PostgreSQL with PostGIS extension
+DATABASE_URL=postgresql://floatr_user:your-database-password@database:5432/floatr_production?schema=public
+DATABASE_PASSWORD=your-secure-database-password
+
+# =============================================================================
+# REDIS CONFIGURATION
+# =============================================================================
+# For caching and session storage
+REDIS_URL=redis://:your-redis-password@redis:6379
+REDIS_PASSWORD=your-secure-redis-password
+
+# =============================================================================
+# AUTHENTICATION (CLERK)
+# =============================================================================
+# Get these from: https://dashboard.clerk.com/
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+CLERK_SECRET_KEY=sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Webhook endpoints for Clerk
+CLERK_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# IDENTITY VERIFICATION (VERIFF)
+# =============================================================================
+# Get these from: https://portal.veriff.com/
+VERIFF_API_KEY=your-veriff-api-key
+VERIFF_SECRET=your-veriff-secret-key
+VERIFF_WEBHOOK_URL=https://your-domain.com/api/webhooks/veriff
+
+# =============================================================================
+# MAPS & GEOLOCATION (MAPBOX)
+# =============================================================================
+# Get from: https://account.mapbox.com/access-tokens/
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6IkNrxxxxxxxxxxxxxxxxx
+
+# =============================================================================
+# SMS NOTIFICATIONS (TWILIO)
+# =============================================================================
+# Get these from: https://console.twilio.com/
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=+1234567890
+
+# =============================================================================
+# EMAIL NOTIFICATIONS (SENDGRID)
+# =============================================================================
+# Get from: https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Email addresses
+FROM_EMAIL=noreply@your-domain.com
+EMERGENCY_NOTIFICATION_EMAIL=emergency@your-domain.com
+
+# =============================================================================
+# CONTENT MODERATION (GOOGLE PERSPECTIVE API)
+# =============================================================================
+# Get from: https://console.cloud.google.com/apis/credentials
+# Set path to your Google Cloud service account JSON file
+GOOGLE_APPLICATION_CREDENTIALS=/app/google-credentials.json
+
+# =============================================================================
+# MONITORING & ALERTS
+# =============================================================================
+# Slack webhooks for notifications
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T00000000/B00000000/xxxxxxxxxxxxxxxxxxxxxxxx
+EMERGENCY_SLACK_WEBHOOK=https://hooks.slack.com/services/T00000000/B00000000/xxxxxxxxxxxxxxxxxxxxxxxx
+
+# Application monitoring
+SENTRY_DSN=https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@xxxxxxx.ingest.sentry.io/xxxxxxx
+
+# =============================================================================
+# SECURITY & RATE LIMITING
+# =============================================================================
+# JWT secret for additional auth
+JWT_SECRET=your-jwt-secret-min-32-characters-long
+
+# Rate limiting (requests per minute)
+RATE_LIMIT_MAX=100
+RATE_LIMIT_WINDOW_MS=60000
+
+# Session security
+SESSION_SECRET=your-session-secret-min-32-characters
+
+# =============================================================================
+# FILE STORAGE
+# =============================================================================
+# For image uploads (choose one)
+
+# Local storage (development/small deployments)
+UPLOAD_STORAGE=local
+UPLOAD_PATH=/app/uploads
+
+# AWS S3 (recommended for production)
+# UPLOAD_STORAGE=s3
+# AWS_ACCESS_KEY_ID=your-aws-access-key
+# AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+# AWS_REGION=us-east-1
+# AWS_S3_BUCKET=floatr-uploads-production
+
+# Cloudinary (alternative)
+# UPLOAD_STORAGE=cloudinary
+# CLOUDINARY_CLOUD_NAME=your-cloud-name
+# CLOUDINARY_API_KEY=your-api-key
+# CLOUDINARY_API_SECRET=your-api-secret
+
+# =============================================================================
+# LOGGING & ANALYTICS
+# =============================================================================
+# Log level (error, warn, info, debug)
+LOG_LEVEL=info
+
+# Google Analytics
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+
+# =============================================================================
+# PERFORMANCE & CACHING
+# =============================================================================
+# Cache TTL in seconds
+CACHE_TTL=3600
+
+# CDN for static assets
+CDN_URL=https://cdn.your-domain.com
+
+# =============================================================================
+# BACKUP & MAINTENANCE
+# =============================================================================
+# Database backup settings
+BACKUP_RETENTION_DAYS=30
+BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+
+# Maintenance mode
+MAINTENANCE_MODE=false
+MAINTENANCE_MESSAGE="Floatr is temporarily down for maintenance. We'll be back soon!"
+
+# =============================================================================
+# THIRD-PARTY INTEGRATIONS
+# =============================================================================
+# Weather API (optional - for weather-based features)
+OPENWEATHER_API_KEY=your-openweather-api-key
+
+# Marine traffic API (optional - for vessel tracking)
+MARINETRAFFIC_API_KEY=your-marinetraffic-api-key
+
+# =============================================================================
+# DEVELOPMENT & TESTING
+# =============================================================================
+# Only set these for staging/development environments
+# DEBUG=false
+# MOCK_PAYMENTS=false
+# MOCK_SMS=false
+# MOCK_EMAIL=false
+
+# =============================================================================
+# DOCKER DEPLOYMENT SPECIFIC
+# =============================================================================
+# For docker-compose deployment
+COMPOSE_PROJECT_NAME=floatr-production
+DOCKER_REGISTRY=docker.io
+IMAGE_NAME=floatr
+IMAGE_VERSION=latest
+
+# =============================================================================
+# NOTES FOR DEVOPS TEAM
+# =============================================================================
+# 1. Set up SSL certificates and place them in ./ssl/ directory
+# 2. Create Google Cloud service account and download JSON to ./google-credentials.json
+# 3. Configure firewall to allow only necessary ports (80, 443, 22)
+# 4. Set up automated backups with proper retention policies
+# 5. Configure monitoring and alerting for all critical services
+# 6. Enable log rotation to prevent disk space issues
+# 7. Set up CI/CD pipeline with proper secret management
+# 8. Configure domain DNS with proper records (A, AAAA, MX if needed)
+# 9. Set up CDN for static assets to improve performance
+# 10. Configure auto-scaling if using cloud deployment (AWS ECS, GCP Cloud Run, etc.)
+
+# =============================================================================
+# SECURITY CHECKLIST
+# =============================================================================
+# ✓ All secrets are properly generated and secure (min 32 chars)
+# ✓ Database credentials are unique and strong
+# ✓ API keys are production keys (not test/sandbox)
+# ✓ HTTPS is enforced for all external communications
+# ✓ CORS is properly configured with specific origins
+# ✓ Rate limiting is enabled and properly configured
+# ✓ Security headers are enabled in next.config.ts
+# ✓ All webhooks use proper authentication/verification
+# ✓ File uploads are properly validated and secured
+# ✓ Monitoring and alerting are configured for security events 

@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database with PostGIS extension
+  database:
+    image: postgis/postgis:16-3.4
+    container_name: floatr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: floatr_production
+      POSTGRES_USER: floatr_user
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U floatr_user -d floatr_production"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: floatr-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Floatr Next.js application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    image: floatr:latest
+    container_name: floatr-app
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://floatr_user:${DATABASE_PASSWORD}@database:5432/floatr_production?schema=public
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      
+      # Application
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${APP_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # Authentication (Clerk)
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      
+      # Identity Verification (Veriff)
+      VERIFF_API_KEY: ${VERIFF_API_KEY}
+      VERIFF_SECRET: ${VERIFF_SECRET}
+      VERIFF_WEBHOOK_URL: ${APP_URL}/api/webhooks/veriff
+      
+      # Maps (Mapbox)
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN}
+      
+      # SMS (Twilio)
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      
+      # Email (SendGrid)
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      FROM_EMAIL: ${FROM_EMAIL}
+      EMERGENCY_NOTIFICATION_EMAIL: ${EMERGENCY_EMAIL}
+      
+      # Content Moderation (Google)
+      GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
+      
+      # Monitoring & Alerts
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
+      EMERGENCY_SLACK_WEBHOOK: ${EMERGENCY_SLACK_WEBHOOK}
+      
+      # Security
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      
+    volumes:
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+      - ./google-credentials.json:/app/google-credentials.json:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy for SSL and load balancing
+  nginx:
+    image: nginx:alpine
+    container_name: floatr-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - app_logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Database backup service
+  backup:
+    image: postgres:16-alpine
+    container_name: floatr-backup
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - backup_data:/backups
+      - ./scripts/backup.sh:/backup.sh:ro
+    command: >
+      sh -c "
+        chmod +x /backup.sh &&
+        crond -f
+      "
+    networks:
+      - floatr-network
+
+  # Log aggregation (optional)
+  # Uncomment for centralized logging
+  # fluentd:
+  #   image: fluentd:v1.16-debian-1
+  #   container_name: floatr-logs
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./fluentd.conf:/fluentd/etc/fluent.conf:ro
+  #     - app_logs:/var/log/app
+  #   ports:
+  #     - "24224:24224"
+  #   networks:
+  #     - floatr-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_uploads:
+    driver: local
+  app_logs:
+    driver: local
+  backup_data:
+    driver: local
+
+networks:
+  floatr-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
