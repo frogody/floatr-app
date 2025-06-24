@@ -1,0 +1,434 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums for type safety
+enum UserRole {
+  CAPTAIN
+  CREW
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum BoatType {
+  SAILBOAT
+  MOTORBOAT
+  YACHT
+  CATAMARAN
+  SPEEDBOAT
+  OTHER
+}
+
+enum BoatVibe {
+  PARTY
+  CHILL
+  PRIVATE
+  FAMILY
+  ADVENTURE
+}
+
+enum MessageType {
+  TEXT
+  EMOJI
+  IMAGE
+  LOCATION
+  SYSTEM
+}
+
+enum SOSStatus {
+  ACTIVE
+  RESOLVED
+  FALSE_ALARM
+}
+
+enum ReportReason {
+  INAPPROPRIATE_BEHAVIOR
+  HARASSMENT
+  FAKE_PROFILE
+  SAFETY_CONCERN
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  DISMISSED
+}
+
+enum MatchStatus {
+  PENDING
+  MATCHED
+  EXPIRED
+}
+
+enum SwipeType {
+  LIKE
+  PASS
+}
+
+// Core User model
+model User {
+  id                 String             @id @default(cuid())
+  clerkId            String             @unique // Clerk user ID
+  email              String             @unique
+  role               UserRole           @default(CREW)
+  verificationStatus VerificationStatus @default(PENDING)
+  isVerified         Boolean            @default(false)
+  isActive           Boolean            @default(true)
+  lastLogin          DateTime?
+  
+  // Emergency Contact Information (for SOS alerts)
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  emergencyContactRelation String?
+  
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Relations
+  profile            UserProfile?
+  verificationData   VerificationData?
+  ownedBoats         Boat[]             @relation("BoatCaptain")
+  crewMemberships    CrewMembership[]
+  discoverySettings  DiscoverySettings?
+  sentMessages       Message[]
+  sosAlerts          SOSAlert[]
+  reportsSubmitted   Report[]           @relation("ReportSubmitter")
+  reportsReceived    Report[]           @relation("ReportTarget")
+  blocksInitiated    BlockedUser[]      @relation("Blocker")
+  blocksReceived     BlockedUser[]      @relation("Blocked")
+  auditLogs          AuditLog[]
+  oauthAccounts      OAuthAccount[]
+  userSessions       UserSession[]
+
+  @@map("users")
+}
+
+// User profile information
+model UserProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  firstName         String
+  lastName          String
+  dateOfBirth       DateTime
+  profileImage      String?
+  bio               String?
+  interests         String[] // Array of interest strings
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emergencyContacts EmergencyContact[]
+
+  @@map("user_profiles")
+}
+
+// Emergency contacts for safety
+model EmergencyContact {
+  id              String      @id @default(cuid())
+  userProfileId   String
+  name            String
+  phone           String
+  relationship    String
+  createdAt       DateTime    @default(now())
+
+  // Relations
+  userProfile     UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
+
+// Identity verification data
+model VerificationData {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  documentType       String
+  documentImages     String[]
+  selfieVideo        String?
+  verificationResult Json?              // Stores Veriff API response
+  status             VerificationStatus @default(PENDING)
+  submittedAt        DateTime           @default(now())
+  processedAt        DateTime?
+
+  // Relations
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_data")
+}
+
+// Boat profiles (Captain-owned)
+model Boat {
+  id            String   @id @default(cuid())
+  captainId     String
+  name          String
+  type          BoatType
+  length        Float?   // in meters
+  capacity      Int
+  images        String[] @default([])
+  currentVibe   BoatVibe @default(CHILL)
+  description   String?
+  amenities     String[] @default([])
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  captain       User            @relation("BoatCaptain", fields: [captainId], references: [id], onDelete: Cascade)
+  crew          CrewMembership[]
+  locations     BoatLocation[]
+  swipesByBoat  SwipeAction[]   @relation("SwipeByBoat")
+  swipesOnBoat  SwipeAction[]   @relation("SwipeOnBoat")
+  likesGiven    Match[]         @relation("LikerBoat")
+  likesReceived Match[]         @relation("LikedBoat")
+  chatRooms     ChatRoom[]
+
+  @@map("boats")
+}
+
+// Crew memberships (many-to-many between User and Boat)
+model CrewMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  boatId    String
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  boat      Boat     @relation(fields: [boatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boatId])
+  @@map("crew_memberships")
+}
+
+// Real-time boat locations
+model BoatLocation {
+  id          String   @id @default(cuid())
+  boatId      String
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  heading     Float?   // 0-360 degrees
+  speed       Float?   // knots
+  isVisible   Boolean  @default(true)
+  recordedAt  DateTime @default(now())
+
+  // Relations
+  boat        Boat     @relation(fields: [boatId], references: [id], onDelete: Cascade)
+
+  @@map("boat_locations")
+}
+
+// User discovery preferences
+model DiscoverySettings {
+  id                  String     @id @default(cuid())
+  userId              String     @unique
+  maxDistance         Int        @default(25) // in kilometers
+  preferredVibes      BoatVibe[]
+  ageRangeMin         Int        @default(18)
+  ageRangeMax         Int        @default(65)
+  preferredBoatTypes  BoatType[]
+  isDiscoverable      Boolean    @default(true)
+  updatedAt           DateTime   @updatedAt
+
+  // Relations
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("discovery_settings")
+}
+
+// Swipe actions for boat-to-boat matching
+model SwipeAction {
+  id            String    @id @default(cuid())
+  swipeByBoatId String    // Boat that performed the swipe
+  swipeOnBoatId String    // Boat that was swiped on
+  action        SwipeType // LIKE or PASS
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  swipeByBoat   Boat      @relation("SwipeByBoat", fields: [swipeByBoatId], references: [id], onDelete: Cascade)
+  swipeOnBoat   Boat      @relation("SwipeOnBoat", fields: [swipeOnBoatId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate swipes between same boats
+  @@unique([swipeByBoatId, swipeOnBoatId])
+  @@map("swipe_actions")
+}
+
+// Matches between boats based on mutual likes
+model Match {
+  id            String      @id @default(cuid())
+  likerBoatId   String      // Boat that initiated the like
+  likedBoatId   String      // Boat that received the like
+  status        MatchStatus @default(PENDING)
+  matchedAt     DateTime?   // When mutual match occurred
+  expiresAt     DateTime?   // When match expires if not mutual
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  likerBoat     Boat        @relation("LikerBoat", fields: [likerBoatId], references: [id], onDelete: Cascade)
+  likedBoat     Boat        @relation("LikedBoat", fields: [likedBoatId], references: [id], onDelete: Cascade)
+  chatRoom      ChatRoom?
+
+  // Prevent duplicate likes between same boats
+  @@unique([likerBoatId, likedBoatId])
+  @@map("matches")
+}
+
+// Chat rooms for matched boats
+model ChatRoom {
+  id            String    @id @default(cuid())
+  matchId       String    @unique
+  participants  String[]  // boat IDs
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  lastMessageAt DateTime?
+
+  // Relations
+  match         Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  messages      Message[]
+  boats         Boat[]
+
+  @@map("chat_rooms")
+}
+
+// Messages in chat rooms
+model Message {
+  id           String      @id @default(cuid())
+  chatRoomId   String
+  senderId     String
+  content      String
+  messageType  MessageType @default(TEXT)
+  readBy       String[]    @default([]) // boat IDs that have read the message
+  isDeleted    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  chatRoom     ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sender       User        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+// SOS emergency alerts
+model SOSAlert {
+  id         String    @id @default(cuid())
+  userId     String
+  latitude   Float
+  longitude  Float
+  message    String?
+  status     SOSStatus @default(ACTIVE)
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  // Relations
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sos_alerts")
+}
+
+// User reports for safety and moderation
+model Report {
+  id               String       @id @default(cuid())
+  reporterId       String
+  reportedUserId   String
+  reportedBoatId   String?
+  reason           ReportReason
+  description      String
+  evidence         String[]     @default([])
+  status           ReportStatus @default(PENDING)
+  createdAt        DateTime     @default(now())
+  resolvedAt       DateTime?
+
+  // Relations
+  reporter         User         @relation("ReportSubmitter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser     User         @relation("ReportTarget", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+// Blocked users for safety
+model BlockedUser {
+  id             String   @id @default(cuid())
+  blockerId      String
+  blockedUserId  String
+  reason         String?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  blocker        User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked        User     @relation("Blocked", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedUserId])
+  @@map("blocked_users")
+}
+
+// OAuth accounts for social login
+model OAuthAccount {
+  id               String    @id @default(cuid())
+  userId           String
+  provider         String    // 'google', 'apple', etc.
+  providerUserId   String
+  accessToken      String?
+  refreshToken     String?
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  // Relations
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@map("oauth_accounts")
+}
+
+// User sessions for session management
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+// Audit log for security and compliance
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  action       String
+  resourceType String?
+  resourceId   String?
+  details      Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
