@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database with PostGIS extension
+  database:
+    image: postgis/postgis:16-3.4
+    container_name: floatr-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: floatr_production
+      POSTGRES_USER: floatr_user
+      POSTGRES_PASSWORD: floatr_local_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U floatr_user -d floatr_production"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: floatr-redis-local
+    restart: unless-stopped
+    command: redis-server --requirepass floatr_redis_password
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Floatr Next.js application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    image: floatr:local
+    container_name: floatr-app-local
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://floatr_user:floatr_local_password@database:5432/floatr_production?schema=public
+      
+      # Redis
+      REDIS_URL: redis://:floatr_redis_password@redis:6379
+      
+      # Application
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: http://localhost
+      NEXTAUTH_SECRET: floatr-local-testing-secret-key-32-chars-minimum-length
+      
+      # Mock external services for local testing
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_local_testing_key_placeholder
+      CLERK_SECRET_KEY: sk_test_local_testing_key_placeholder
+      VERIFF_API_KEY: test_api_key_local
+      VERIFF_SECRET: test_secret_local
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: pk.test_mapbox_token_placeholder
+      TWILIO_ACCOUNT_SID: test_account_sid
+      TWILIO_AUTH_TOKEN: test_auth_token
+      TWILIO_PHONE_NUMBER: +1234567890
+      SENDGRID_API_KEY: SG.test_api_key_placeholder
+      FROM_EMAIL: noreply@localhost
+      EMERGENCY_NOTIFICATION_EMAIL: emergency@localhost
+      GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
+      SLACK_WEBHOOK_URL: https://hooks.slack.com/test_webhook_url
+      EMERGENCY_SLACK_WEBHOOK: https://hooks.slack.com/test_emergency_webhook
+      ALLOWED_ORIGINS: http://localhost,http://localhost:80,http://localhost:3000
+      
+      # Admin user for testing
+      ADMIN_EMAIL: admin@floatr.local
+      ADMIN_CLERK_ID: user_test_admin_local_123456789
+      
+    volumes:
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+      - ./google-credentials.json:/app/google-credentials.json:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy for local testing (HTTP only)
+  nginx:
+    image: nginx:alpine
+    container_name: floatr-nginx-local
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - app_logs:/var/log/nginx
+    ports:
+      - "80:80"
+    networks:
+      - floatr-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_uploads:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  floatr-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 
