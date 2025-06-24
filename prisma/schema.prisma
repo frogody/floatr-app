@@ -91,6 +91,16 @@ enum SwipeType {
   PASS
 }
 
+enum ZoneType {
+  ECOLOGICAL
+  ALCOHOL_FREE
+  QUIET_ZONE
+  NO_ANCHOR
+  HIGH_TRAFFIC
+  SPEED_RESTRICTED
+  PROTECTED_AREA
+}
+
 // Core User model
 model User {
   id                 String             @id @default(cuid())
@@ -427,6 +437,25 @@ model UserSession {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_sessions")
+}
+
+// No-go zones for maritime compliance
+model NoGoZone {
+  id          String   @id @default(cuid())
+  name        String
+  zoneType    ZoneType
+  description String
+  // PostGIS geometry field for polygon data
+  geometry    Unsupported("geometry(Polygon, 4326)")
+  isActive    Boolean  @default(true)
+  severity    String   @default("warning") // info, warning, danger
+  regulations String[] @default([]) // Array of regulation descriptions
+  authority   String?  // Governing authority (e.g., "US Coast Guard", "Marina Authority")
+  contactInfo String?  // Contact information for questions
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("no_go_zones")
 }
 
 // Audit log for security and compliance

@@ -1,0 +1,194 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Marine Sanctuary - Monterey Bay",
+        "zoneType": "ECOLOGICAL",
+        "description": "Protected marine sanctuary. No fishing, anchoring restricted. Wildlife protection area with sensitive marine life including sea otters, seals, and migrating whales.",
+        "severity": "danger",
+        "regulations": [
+          "No fishing allowed",
+          "Anchoring prohibited in designated areas", 
+          "Maintain 150ft distance from marine mammals",
+          "Speed limit: 5 knots maximum"
+        ],
+        "authority": "NOAA - National Marine Sanctuaries",
+        "contactInfo": "Phone: (831) 647-4201 | Email: montereybay@noaa.gov"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-121.9000, 36.6000],
+          [-121.8500, 36.6000], 
+          [-121.8500, 36.6500],
+          [-121.9000, 36.6500],
+          [-121.9000, 36.6000]
+        ]]
+      }
+    },
+    {
+      "type": "Feature", 
+      "properties": {
+        "name": "Quiet Zone - Evening Anchorage",
+        "zoneType": "QUIET_ZONE",
+        "description": "Designated quiet zone for peaceful anchoring. Noise restrictions in effect from 10 PM to 6 AM. Popular spot for overnight stays.",
+        "severity": "warning",
+        "regulations": [
+          "Quiet hours: 10 PM - 6 AM",
+          "Generator use prohibited during quiet hours",
+          "Music and loud conversations discouraged",
+          "Maximum 48-hour anchoring"
+        ],
+        "authority": "Local Harbor Authority",
+        "contactInfo": "Harbor Master: (555) 123-4567"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.4000, 37.8000],
+          [-122.3800, 37.8000],
+          [-122.3800, 37.8200], 
+          [-122.4000, 37.8200],
+          [-122.4000, 37.8000]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Commercial Shipping Lane",
+        "zoneType": "HIGH_TRAFFIC", 
+        "description": "Major commercial shipping route. High vessel traffic area with large cargo ships and tankers. Exercise extreme caution.",
+        "severity": "danger",
+        "regulations": [
+          "Yield right of way to commercial vessels",
+          "Monitor VHF Channel 16 for traffic updates",
+          "Avoid anchoring in shipping lanes",
+          "Maintain constant watch when crossing"
+        ],
+        "authority": "US Coast Guard",
+        "contactInfo": "Emergency: VHF Channel 16 | Coast Guard: (415) 399-3547"
+      },
+      "geometry": {
+        "type": "Polygon", 
+        "coordinates": [[
+          [-122.5000, 37.7500],
+          [-122.4500, 37.7500],
+          [-122.4500, 37.7800],
+          [-122.5000, 37.7800], 
+          [-122.5000, 37.7500]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Marina No-Alcohol Zone",
+        "zoneType": "ALCOHOL_FREE",
+        "description": "Alcohol-free zone designated by marina management. Family-friendly area with strict enforcement of alcohol prohibition.",
+        "severity": "warning", 
+        "regulations": [
+          "No alcohol consumption on vessels",
+          "No alcohol visible on deck", 
+          "Subject to random inspections",
+          "Violations result in immediate eviction"
+        ],
+        "authority": "Marina Management",
+        "contactInfo": "Marina Office: (555) 987-6543"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-122.3500, 37.8100],
+          [-122.3400, 37.8100],
+          [-122.3400, 37.8150],
+          [-122.3500, 37.8150], 
+          [-122.3500, 37.8100]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Coral Reef - No Anchor Zone", 
+        "zoneType": "NO_ANCHOR",
+        "description": "Protected coral reef ecosystem. Anchoring prohibited to prevent reef damage. Mooring buoys available for temporary stays.",
+        "severity": "danger",
+        "regulations": [
+          "Absolutely no anchoring",
+          "Use designated mooring buoys only",
+          "No bottom fishing",
+          "Observe marine life from distance"
+        ],
+        "authority": "Marine Protected Area Authority",
+        "contactInfo": "Reef Protection Hotline: (555) 246-8135"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-121.8800, 36.6200],
+          [-121.8700, 36.6200], 
+          [-121.8700, 36.6300],
+          [-121.8800, 36.6300],
+          [-121.8800, 36.6200]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Speed Restricted - Manatee Protection",
+        "zoneType": "SPEED_RESTRICTED",
+        "description": "Manatee protection zone with strict speed limits. These gentle marine mammals are vulnerable to boat strikes.",
+        "severity": "danger",
+        "regulations": [
+          "Maximum speed: 3 knots", 
+          "No wake zone",
+          "Watch for manatees at surface",
+          "Report injured marine life immediately"
+        ],
+        "authority": "Florida Fish and Wildlife Conservation Commission",
+        "contactInfo": "Wildlife Alert: 1-888-404-3922"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-82.6000, 27.7000],
+          [-82.5800, 27.7000],
+          [-82.5800, 27.7200], 
+          [-82.6000, 27.7200],
+          [-82.6000, 27.7000]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Whale Migration Corridor",
+        "zoneType": "PROTECTED_AREA",
+        "description": "Seasonal whale migration route. Enhanced protection during migration seasons (March-May, September-November).",
+        "severity": "warning",
+        "regulations": [
+          "Maintain 100 yard distance from whales",
+          "Reduce speed to 10 knots maximum during migration season",
+          "No fishing with nets",
+          "Report whale sightings to marine authorities"
+        ],
+        "authority": "NOAA Fisheries",
+        "contactInfo": "Marine Mammal Stranding: 1-866-755-6622"
+      },
+      "geometry": {
+        "type": "Polygon", 
+        "coordinates": [[
+          [-122.0000, 36.9000],
+          [-121.9500, 36.9000],
+          [-121.9500, 36.9500],
+          [-122.0000, 36.9500],
+          [-122.0000, 36.9000]
+        ]]
+      }
+    }
+  ]
+} 
