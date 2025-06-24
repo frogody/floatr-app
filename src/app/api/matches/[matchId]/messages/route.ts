@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { contentModerationService } from '@/lib/content-moderation';
 
 interface RouteParams {
   params: Promise<{ matchId: string }>;
@@ -161,6 +162,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
       readBy: message.readBy,
       isOwn: message.senderId === user.id,
+      isFlagged: message.isFlagged,
+      toxicityScore: message.toxicityScore,
+      moderationData: message.moderationData,
     }));
 
     // Mark messages as read by current user's boat
@@ -381,7 +385,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
       readBy: message.readBy,
       isOwn: true,
+      isFlagged: message.isFlagged,
+      toxicityScore: message.toxicityScore,
     };
+
+    // Start async content moderation (fire-and-forget)
+    // This happens AFTER the response to avoid delaying the user
+    setImmediate(() => {
+      contentModerationService.moderateMessage(message.id)
+        .catch(error => {
+          console.error('Async content moderation failed:', error);
+        });
+    });
 
     return NextResponse.json({
       success: true,

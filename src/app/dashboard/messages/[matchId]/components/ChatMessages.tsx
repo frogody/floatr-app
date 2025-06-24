@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useChat } from '@/lib/socket';
+import { useUser } from '@clerk/nextjs';
 
 interface Message {
   id: string;
@@ -18,6 +19,9 @@ interface Message {
   };
   readBy: string[];
   isOwn: boolean;
+  isFlagged?: boolean;
+  toxicityScore?: number;
+  moderationData?: any;
 }
 
 interface OtherBoat {
@@ -64,9 +68,13 @@ export function ChatMessages({ matchId, messages: initialMessages, currentUserId
   const [allMessages, setAllMessages] = useState<Message[]>(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { user } = useUser();
   
   // Use Socket.IO for real-time messaging
   const { isConnected, messages: realtimeMessages } = useChat(matchId, currentUserId);
+
+  // Check if current user is a moderator (can be expanded based on roles)
+  const isModerator = user?.publicMetadata?.role === 'moderator' || user?.publicMetadata?.isModerator;
 
   // Combine initial messages with real-time messages
   useEffect(() => {
@@ -177,8 +185,28 @@ export function ChatMessages({ matchId, messages: initialMessages, currentUserId
                       isOwn 
                         ? 'bg-blue-600 text-white rounded-br-md' 
                         : 'bg-white text-gray-900 rounded-bl-md border'
+                    } ${
+                      // Show red border for flagged messages (own messages or if moderator)
+                      message.isFlagged && (isOwn || isModerator)
+                        ? 'border-2 border-red-500 shadow-red-200' 
+                        : ''
                     }`}
                   >
+                    {/* Content Moderation Warning (for flagged messages) */}
+                    {message.isFlagged && (isOwn || isModerator) && (
+                      <div className="mb-2">
+                        <Badge variant="destructive" className="text-xs">
+                          🚨 Flagged Content
+                          {message.toxicityScore && ` (${(message.toxicityScore * 100).toFixed(0)}% toxic)`}
+                        </Badge>
+                        {isModerator && message.moderationData && (
+                          <div className="text-xs mt-1 opacity-75">
+                            Detected: {message.moderationData.maxAttribute}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Message Content */}
                     <div className="break-words">
                       {message.messageType === 'TEXT' ? (

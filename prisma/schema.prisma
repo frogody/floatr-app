@@ -326,6 +326,12 @@ model Message {
   messageType  MessageType @default(TEXT)
   readBy       String[]    @default([]) // boat IDs that have read the message
   isDeleted    Boolean     @default(false)
+  
+  // Content Moderation Fields
+  isFlagged       Boolean  @default(false)
+  toxicityScore   Float?   // Perspective API toxicity score (0.0 - 1.0)
+  moderationData  Json?    // Full Perspective API response
+  
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
